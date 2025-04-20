@@ -1,64 +1,77 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<title>لعبة الكلمة</title>
-
-<!-- خط عربي -->
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@700&display=swap" rel="stylesheet">
-
+<meta charset="UTF-8" />
+<title>لعبة الكلمات</title>
 <style>
 body {
-font-family: 'Cairo', sans-serif;
-direction: rtl;
-text-align: center;
-margin-top: 100px;
 background-color: #000;
 color: white;
-transition: background-color 0.5s ease;
+font-family: 'Tahoma', sans-serif;
+text-align: center;
+margin: 0;
+padding: 20px;
+transition: background-color 0.5s, color 0.5s;
 }
 
-.logo {
-font-size: 50px;
-font-weight: bold;
-background: linear-gradient(to bottom, red, white);
--webkit-background-clip: text;
--webkit-text-fill-color: transparent;
-margin-bottom: 20px;
+.dark-mode {
+background-color: #ffffff;
+color: #000000;
 }
 
 h1 {
-font-size: 30px;
+font-size: 48px;
 margin-bottom: 10px;
+background: linear-gradient(to right, gold, white);
+-webkit-background-clip: text;
+-webkit-text-fill-color: transparent;
 }
 
-input, button {
-padding: 10px;
+.hint-center {
 font-size: 16px;
-border-radius: 5px;
-border: none;
-margin: 5px;
+color: #ccc;
+margin-top: -5px;
+margin-bottom: 20px;
 }
 
-#result {
+#input-container {
 margin-top: 20px;
-font-size: 20px;
-font-weight: bold;
 }
 
-#attempts, #timer, #stats {
+.input-row {
+display: flex;
+justify-content: center;
+align-items: center;
+gap: 10px;
 margin-top: 10px;
-font-size: 16px;
-color: gray;
+}
+
+input {
+padding: 10px;
+font-size: 20px;
+width: 300px;
+text-align: center;
+}
+
+button {
+padding: 10px 20px;
+font-size: 18px;
+cursor: pointer;
 }
 
 .hearts {
-font-size: 24px;
-color: red;
+font-size: 30px;
+margin: 10px 0;
+}
+
+#message {
+margin-top: 20px;
+font-size: 26px;
+font-weight: bold;
 }
 
 .shake {
-animation: shake 0.4s;
+animation: shake 0.5s;
 }
 
 @keyframes shake {
@@ -69,144 +82,177 @@ animation: shake 0.4s;
 100% { transform: translateX(0); }
 }
 
-@keyframes typing {
-from { width: 0 }
-to { width: 100% }
+#timer {
+font-size: 20px;
+margin-top: 10px;
 }
 
-.typing {
-display: inline-block;
-overflow: hidden;
-white-space: nowrap;
-animation: typing 3s steps(30, end);
-border-right: 2px solid white;
+#hint {
+font-size: 18px;
+color: red;
+margin-top: 5px;
+}
+
+#theme-toggle {
+position: fixed;
+bottom: 10px;
+left: 10px;
+background-color: #222;
+color: white;
+border: none;
+padding: 8px 16px;
+}
+
+#stats {
+margin-top: 30px;
+font-size: 18px;
+display: none;
 }
 </style>
 </head>
 <body>
+<h1>WG</h1>
+<p class="hint-center">اللعبة عبارة عن كلمة واحدة فقط</p>
 
-<div class="logo">WG</div>
-<h1>ادخل الكلمة الصحيحة</h1>
+<div id="input-container">
+<div style="text-align: right; width: 300px; margin: 0 auto;">
+<p style="font-size: 20px;">ادخل الكلمة الصحيحة:</p>
+</div>
 
-<input type="text" id="wordInput" placeholder="اكتب الكلمة هنا">
-<button onclick="checkWord()">تحقق</button>
+<div class="input-row">
+<input type="text" id="userInput" />
+<button onclick="checkAnswer()">تحقق</button>
+</div>
 
-<div id="result"></div>
-<div id="attempts" class="hearts">❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️</div>
+<div class="hearts" id="hearts">❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️</div>
 <div id="timer">الوقت المتبقي: 10:00</div>
+<div id="hint"></div>
+</div>
+
+<div id="message"></div>
 <div id="stats"></div>
 
-<!-- مؤثرات صوتية -->
-<audio id="winSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_7c83fa5c83.mp3?filename=success-1-6297.mp3"></audio>
-<audio id="loseSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_9d898d6c8d.mp3?filename=fail-trombone-2-6342.mp3"></audio>
+<button id="theme-toggle" onclick="toggleTheme()">تبديل الوضع</button>
 
 <script>
-let attemptsLeft = 10;
-let wrongAttempts = 0;
-let totalTime = 10 * 60;
+const levels = ["غازي", "رجالي", "ملاكي"];
+const hints = ["غ", "ر", "م"];
+let currentLevel = 0;
+let attempts = 10;
+let totalAttemptsUsed = 0;
+let correctAnswers = 0;
+let timeLeft = 600;
 let timerInterval;
-const correctWord = "غازي";
-const resultDiv = document.getElementById("result");
-const attemptsDiv = document.getElementById("attempts");
-const timerDiv = document.getElementById("timer");
-const statsDiv = document.getElementById("stats");
-const winSound = document.getElementById("winSound");
-const loseSound = document.getElementById("loseSound");
-let gameEnded = false;
+let timeUsed = 0;
+let wrongPerLevel = [0, 0, 0];
+let hintShown = [false, false, false];
+
+const winSound = new Audio("https://www.soundjay.com/buttons/sounds/button-3.mp3");
+const loseSound = new Audio("https://www.soundjay.com/misc/sounds/fail-buzzer-01.mp3");
+const nextSound = new Audio("https://www.soundjay.com/buttons/sounds/button-30.mp3");
+const wrongSound = new Audio("https://www.soundjay.com/button/sounds/button-10.mp3");
+const heartBreakSound = new Audio("https://cdn.pixabay.com/download/audio/2023/03/03/audio_28cc2e77a3.mp3?filename=heart-break-110742.mp3");
+
+const input = document.getElementById("userInput");
+const message = document.getElementById("message");
+const hearts = document.getElementById("hearts");
+const timer = document.getElementById("timer");
+const hint = document.getElementById("hint");
+const stats = document.getElementById("stats");
 
 function updateHearts() {
-let hearts = "";
+let heartDisplay = "";
 for (let i = 0; i < 10; i++) {
-hearts += i < wrongAttempts ? "💔" : "❤️";
+heartDisplay += i < attempts ? "❤️" : "💔";
 }
-attemptsDiv.innerHTML = hearts;
+hearts.innerHTML = heartDisplay;
+}
+
+function showHintIfNeeded() {
+if (wrongPerLevel[currentLevel] >= 3 && !hintShown[currentLevel]) {
+hint.textContent = `تلميح: الكلمة تبدأ بحرف "${hints[currentLevel]}"`;
+hintShown[currentLevel] = true;
+}
 }
 
 function startTimer() {
 timerInterval = setInterval(() => {
-if (totalTime <= 0) {
-clearInterval(timerInterval);
-if (!gameEnded) {
-loseSound.play();
-endGame("انتهى الوقت! انهزمت يا خسران! 😂", false);
-}
-} else {
-totalTime--;
-let minutes = Math.floor(totalTime / 60);
-let seconds = totalTime % 60;
-timerDiv.innerHTML = "الوقت المتبقي: " +
-(minutes < 10 ? "0" + minutes : minutes) + ":" +
-(seconds < 10 ? "0" + seconds : seconds);
+timeLeft--;
+timeUsed++;
+const minutes = Math.floor(timeLeft / 60);
+const seconds = timeLeft % 60;
+timer.textContent = `الوقت المتبقي: ${minutes}:${seconds.toString().padStart(2, '0')}`;
 
-if (totalTime <= 60) {
-timerDiv.style.color = "red";
-timerDiv.style.fontWeight = "bold";
-}
+if (timeLeft <= 0) {
+endGame(false, "انتهى الوقت! خسرت اللعبة!");
 }
 }, 1000);
 }
 
-function typeText(text, callback) {
-resultDiv.innerHTML = "";
-let i = 0;
-let interval = setInterval(() => {
-resultDiv.innerHTML += text.charAt(i);
-i++;
-if (i >= text.length) {
-clearInterval(interval);
-if (callback) callback();
-}
-}, 50);
-}
-
-function endGame(message, won) {
-gameEnded = true;
-document.getElementById("wordInput").disabled = true;
-document.querySelector("button").disabled = true;
-clearInterval(timerInterval);
-timerDiv.style.display = "none";
-document.body.style.backgroundColor = won ? "#013220" : "#333";
-resultDiv.classList.remove("shake");
-resultDiv.classList.remove("typing");
-
-typeText(message, () => {
-const usedTime = 600 - totalTime;
-const minutes = Math.floor(usedTime / 60);
-const seconds = usedTime % 60;
-statsDiv.innerHTML = `<br>الوقت المستخدم: ${minutes}:${seconds < 10 ? "0" + seconds : seconds}<br>
-عدد المحاولات: ${wrongAttempts + (won ? 1 : 0)}<br>
-النتيجة: ${won ? "فوز" : "خسارة"}`;
-});
-}
-
-function checkWord() {
-if (gameEnded) return;
-
-const userInput = document.getElementById("wordInput").value.trim();
-
-if (userInput === correctWord) {
+function checkAnswer() {
+const answer = input.value.trim();
+if (answer === levels[currentLevel]) {
 winSound.play();
-endGame("مبروك! الكلمة صحيحة.", true);
+correctAnswers++;
+message.textContent = `أحسنت! اجتزت المرحلة ${currentLevel + 1}`;
+currentLevel++;
+hint.textContent = "";
+
+if (currentLevel < levels.length) {
+nextSound.play();
+setTimeout(() => {
+message.textContent = `ابدأ المرحلة ${currentLevel + 1}`;
+input.value = "";
+}, 1500);
 } else {
-wrongAttempts++;
-attemptsLeft--;
+endGame(true, "مبروك! فزت بجميع المراحل!");
+}
+} else {
+input.classList.add("shake");
+setTimeout(() => input.classList.remove("shake"), 500);
+
+wrongSound.play();
+heartBreakSound.play();
+
+attempts--;
+wrongPerLevel[currentLevel]++;
+totalAttemptsUsed++;
 updateHearts();
-resultDiv.classList.add("shake");
-setTimeout(() => resultDiv.classList.remove("shake"), 400);
+showHintIfNeeded();
 
-if (attemptsLeft > 0) {
-resultDiv.style.color = "red";
-resultDiv.innerHTML = "خطأ! حاول مرة أخرى.";
+if (attempts <= 0) {
+endGame(false, "انهزمت يا خسران! 😂");
 } else {
-loseSound.play();
-endGame("انهزمت يا خسران! 😂", false);
+message.textContent = "إجابة خاطئة! حاول مرة أخرى.";
 }
 }
 }
 
+function endGame(won, finalMessage) {
+clearInterval(timerInterval);
+input.disabled = true;
+message.textContent = finalMessage;
+document.body.style.backgroundColor = won ? "#0f0" : "#500";
+if (!won) loseSound.play();
+
+const totalMinutes = Math.floor(timeUsed / 60);
+const totalSeconds = timeUsed % 60;
+stats.style.display = "block";
+stats.innerHTML = `
+<hr>
+<h3>إحصائيات اللعبة</h3>
+<p>عدد المحاولات المستخدمة: ${totalAttemptsUsed}</p>
+<p>عدد الإجابات الصحيحة: ${correctAnswers} من ${levels.length}</p>
+<p>الوقت المستخدم: ${totalMinutes}:${totalSeconds.toString().padStart(2, '0')}</p>
+`;
+}
+
+function toggleTheme() {
+document.body.classList.toggle("dark-mode");
+}
+
+updateHearts();
 startTimer();
-updateHearts();
 </script>
-
 </body>
 </html>
