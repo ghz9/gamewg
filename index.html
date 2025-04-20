@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>لعبة الكلمة</title>
+
+<!-- خط عربي -->
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@700&display=swap" rel="stylesheet">
+
+<style>
+body {
+font-family: 'Cairo', sans-serif;
+direction: rtl;
+text-align: center;
+margin-top: 100px;
+background-color: #000;
+color: white;
+transition: background-color 0.5s ease;
+}
+
+.logo {
+font-size: 50px;
+font-weight: bold;
+background: linear-gradient(to bottom, red, white);
+-webkit-background-clip: text;
+-webkit-text-fill-color: transparent;
+margin-bottom: 20px;
+}
+
+h1 {
+font-size: 30px;
+margin-bottom: 10px;
+}
+
+input, button {
+padding: 10px;
+font-size: 16px;
+border-radius: 5px;
+border: none;
+margin: 5px;
+}
+
+#result {
+margin-top: 20px;
+font-size: 20px;
+font-weight: bold;
+}
+
+#attempts, #timer, #stats {
+margin-top: 10px;
+font-size: 16px;
+color: gray;
+}
+
+.hearts {
+font-size: 24px;
+color: red;
+}
+
+.shake {
+animation: shake 0.4s;
+}
+
+@keyframes shake {
+0% { transform: translateX(0); }
+25% { transform: translateX(-5px); }
+50% { transform: translateX(5px); }
+75% { transform: translateX(-5px); }
+100% { transform: translateX(0); }
+}
+
+@keyframes typing {
+from { width: 0 }
+to { width: 100% }
+}
+
+.typing {
+display: inline-block;
+overflow: hidden;
+white-space: nowrap;
+animation: typing 3s steps(30, end);
+border-right: 2px solid white;
+}
+</style>
+</head>
+<body>
+
+<div class="logo">WG</div>
+<h1>ادخل الكلمة الصحيحة</h1>
+
+<input type="text" id="wordInput" placeholder="اكتب الكلمة هنا">
+<button onclick="checkWord()">تحقق</button>
+
+<div id="result"></div>
+<div id="attempts" class="hearts">❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️</div>
+<div id="timer">الوقت المتبقي: 10:00</div>
+<div id="stats"></div>
+
+<!-- مؤثرات صوتية -->
+<audio id="winSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_7c83fa5c83.mp3?filename=success-1-6297.mp3"></audio>
+<audio id="loseSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_9d898d6c8d.mp3?filename=fail-trombone-2-6342.mp3"></audio>
+
+<script>
+let attemptsLeft = 10;
+let wrongAttempts = 0;
+let totalTime = 10 * 60;
+let timerInterval;
+const correctWord = "غازي";
+const resultDiv = document.getElementById("result");
+const attemptsDiv = document.getElementById("attempts");
+const timerDiv = document.getElementById("timer");
+const statsDiv = document.getElementById("stats");
+const winSound = document.getElementById("winSound");
+const loseSound = document.getElementById("loseSound");
+let gameEnded = false;
+
+function updateHearts() {
+let hearts = "";
+for (let i = 0; i < 10; i++) {
+hearts += i < wrongAttempts ? "💔" : "❤️";
+}
+attemptsDiv.innerHTML = hearts;
+}
+
+function startTimer() {
+timerInterval = setInterval(() => {
+if (totalTime <= 0) {
+clearInterval(timerInterval);
+if (!gameEnded) {
+loseSound.play();
+endGame("انتهى الوقت! انهزمت يا خسران! 😂", false);
+}
+} else {
+totalTime--;
+let minutes = Math.floor(totalTime / 60);
+let seconds = totalTime % 60;
+timerDiv.innerHTML = "الوقت المتبقي: " +
+(minutes < 10 ? "0" + minutes : minutes) + ":" +
+(seconds < 10 ? "0" + seconds : seconds);
+
+if (totalTime <= 60) {
+timerDiv.style.color = "red";
+timerDiv.style.fontWeight = "bold";
+}
+}
+}, 1000);
+}
+
+function typeText(text, callback) {
+resultDiv.innerHTML = "";
+let i = 0;
+let interval = setInterval(() => {
+resultDiv.innerHTML += text.charAt(i);
+i++;
+if (i >= text.length) {
+clearInterval(interval);
+if (callback) callback();
+}
+}, 50);
+}
+
+function endGame(message, won) {
+gameEnded = true;
+document.getElementById("wordInput").disabled = true;
+document.querySelector("button").disabled = true;
+clearInterval(timerInterval);
+timerDiv.style.display = "none";
+document.body.style.backgroundColor = won ? "#013220" : "#333";
+resultDiv.classList.remove("shake");
+resultDiv.classList.remove("typing");
+
+typeText(message, () => {
+const usedTime = 600 - totalTime;
+const minutes = Math.floor(usedTime / 60);
+const seconds = usedTime % 60;
+statsDiv.innerHTML = `<br>الوقت المستخدم: ${minutes}:${seconds < 10 ? "0" + seconds : seconds}<br>
+عدد المحاولات: ${wrongAttempts + (won ? 1 : 0)}<br>
+النتيجة: ${won ? "فوز" : "خسارة"}`;
+});
+}
+
+function checkWord() {
+if (gameEnded) return;
+
+const userInput = document.getElementById("wordInput").value.trim();
+
+if (userInput === correctWord) {
+winSound.play();
+endGame("مبروك! الكلمة صحيحة.", true);
+} else {
+wrongAttempts++;
+attemptsLeft--;
+updateHearts();
+resultDiv.classList.add("shake");
+setTimeout(() => resultDiv.classList.remove("shake"), 400);
+
+if (attemptsLeft > 0) {
+resultDiv.style.color = "red";
+resultDiv.innerHTML = "خطأ! حاول مرة أخرى.";
+} else {
+loseSound.play();
+endGame("انهزمت يا خسران! 😂", false);
+}
+}
+}
+
+startTimer();
+updateHearts();
+</script>
+
+</body>
+</html>
